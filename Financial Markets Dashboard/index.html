@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Markets Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #fafafa;
+            --bg-secondary: #ffffff;
+            --text-primary: #000000;
+            --text-secondary: #4a4a4a;
+            --accent-green: #0d9488;
+            --accent-red: #dc2626;
+            --border-color: #d4d4d4;
+            --shadow: rgba(0, 0, 0, 0.08);
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #262626;
+            --text-primary: #fafafa;
+            --text-secondary: #a3a3a3;
+            --border-color: #3f3f3f;
+            --shadow: rgba(0, 0, 0, 0.4);
+        }
+
+        body {
+            font-family: Georgia, 'Times New Roman', Times, serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            padding: 18px;
+            min-height: 100vh;
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+
+        .container {
+            max-width: 1380px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: var(--bg-secondary);
+            padding: 28px 32px;
+            border-radius: 1px;
+            box-shadow: 0 1px 4px var(--shadow);
+            margin-bottom: 28px;
+            text-align: center;
+            border: 1px solid var(--border-color);
+            position: relative;
+            transition: background 0.3s ease, border 0.3s ease;
+        }
+
+        h1 {
+            color: var(--text-primary);
+            font-size: 2.4em;
+            margin-bottom: 8px;
+            font-weight: 400;
+            letter-spacing: 0.5px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1.05em;
+            font-style: italic;
+        }
+
+        .last-updated {
+            margin-top: 14px;
+            color: var(--text-secondary);
+            font-size: 0.88em;
+        }
+
+        .theme-toggle {
+            position: absolute;
+            top: 28px;
+            right: 32px;
+            background: transparent;
+            border: none;
+            padding: 6px;
+            cursor: pointer;
+            font-size: 1.6em;
+            transition: all 0.2s ease;
+            line-height: 1;
+            opacity: 0.7;
+        }
+
+        .theme-toggle:hover {
+            opacity: 1;
+            transform: scale(1.1);
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 18px;
+            margin-bottom: 28px;
+        }
+
+        .card {
+            background: var(--bg-secondary);
+            padding: 22px;
+            border-radius: 1px;
+            box-shadow: 0 1px 4px var(--shadow);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.3s ease;
+            border: 1px solid var(--border-color);
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 3px 8px var(--shadow);
+        }
+
+        .card-title {
+            font-size: 1.25em;
+            font-weight: 600;
+            margin-bottom: 14px;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            letter-spacing: 0.3px;
+        }
+
+        .card-title.positive {
+            color: var(--accent-green);
+        }
+
+        .card-title.negative {
+            color: var(--accent-red);
+        }
+
+        .index-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .index-info h3 {
+            font-size: 1.15em;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .index-value {
+            font-size: 1.95em;
+            font-weight: bold;
+            color: var(--text-primary);
+        }
+
+        .index-change {
+            font-size: 1.15em;
+            font-weight: 600;
+            margin-top: 4px;
+        }
+
+        .positive {
+            color: var(--accent-green);
+        }
+
+        .negative {
+            color: var(--accent-red);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 295px;
+            margin-top: 14px;
+        }
+
+        .large-chart {
+            grid-column: 1 / -1;
+        }
+
+        .large-chart .chart-container {
+            height: 385px;
+        }
+
+        .sector-list {
+            list-style: none;
+            margin-top: 14px;
+        }
+
+        .sector-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 11px;
+            margin-bottom: 7px;
+            background: var(--bg-primary);
+            border-radius: 1px;
+            transition: background 0.15s ease;
+            border: 1px solid var(--border-color);
+        }
+
+        .sector-item:hover {
+            background: var(--border-color);
+        }
+
+        .sector-name {
+            font-weight: 500;
+        }
+
+        .sector-return {
+            font-weight: 600;
+            font-size: 1.08em;
+        }
+
+        .portfolio-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+            gap: 13px;
+            margin-top: 14px;
+        }
+
+        .summary-item {
+            text-align: center;
+            padding: 14px;
+            background: var(--text-primary);
+            color: var(--bg-secondary);
+            border-radius: 1px;
+            border: 1px solid var(--border-color);
+        }
+
+        .summary-label {
+            font-size: 0.88em;
+            opacity: 0.85;
+            margin-bottom: 4px;
+        }
+
+        .summary-value {
+            font-size: 1.75em;
+            font-weight: bold;
+        }
+
+        .controls {
+            display: flex;
+            gap: 9px;
+            margin-top: 14px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 9px 18px;
+            background: var(--text-primary);
+            color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 1px;
+            cursor: pointer;
+            font-size: 0.95em;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            font-family: Georgia, 'Times New Roman', Times, serif;
+        }
+
+        button:hover {
+            background: var(--text-secondary);
+            transform: translateY(-1px);
+        }
+
+        button:active {
+            transform: scale(0.97);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 18px;
+            color: var(--text-primary);
+            font-size: 1.08em;
+        }
+
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 13px;
+            margin-top: 14px;
+        }
+
+        .metric-box {
+            padding: 14px;
+            background: var(--bg-primary);
+            border-radius: 1px;
+            border: 1px solid var(--border-color);
+        }
+
+        .metric-label {
+            font-size: 0.88em;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .metric-value {
+            font-size: 1.45em;
+            font-weight: bold;
+            color: var(--text-primary);
+        }
+
+        footer {
+            text-align: center;
+            padding: 28px 18px;
+            margin-top: 38px;
+            border-top: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            font-size: 0.88em;
+        }
+
+        .copyright {
+            font-style: italic;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.75em;
+            }
+
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .large-chart {
+                grid-column: 1;
+            }
+
+            .theme-toggle {
+                top: 18px;
+                right: 18px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn" aria-label="Toggle theme">☀︎</button>
+            <h1>Financial Markets Dashboard</h1>
+            <div class="subtitle">Real-Time Market Data & Portfolio Analytics</div>
+            <div class="last-updated" id="lastUpdated">Last Updated: <span id="updateTime">Loading...</span></div>
+        </header>
+
+        <div class="dashboard-grid">
+            <!-- Major Indices -->
+            <div class="card">
+                <div class="card-title" id="sp500-title">S&P 500</div>
+                <div class="index-card">
+                    <div class="index-info">
+                        <div class="index-value" id="sp500-value">Loading...</div>
+                        <div class="index-change" id="sp500-change">--</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title" id="dow-title">Dow Jones</div>
+                <div class="index-card">
+                    <div class="index-info">
+                        <div class="index-value" id="dow-value">Loading...</div>
+                        <div class="index-change" id="dow-change">--</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title" id="nasdaq-title">NASDAQ</div>
+                <div class="index-card">
+                    <div class="index-info">
+                        <div class="index-value" id="nasdaq-value">Loading...</div>
+                        <div class="index-change" id="nasdaq-change">--</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Portfolio Summary -->
+            <div class="card">
+                <div class="card-title">Portfolio Summary</div>
+                <div class="portfolio-summary">
+                    <div class="summary-item">
+                        <div class="summary-label">Total Value</div>
+                        <div class="summary-value">$127.5K</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">Daily Return</div>
+                        <div class="summary-value">+2.3%</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">Total Return</div>
+                        <div class="summary-value">+18.7%</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Historical Trends Chart -->
+            <div class="card large-chart">
+                <div class="card-title">Historical Price Trends (90 Days)</div>
+                <div class="controls">
+                    <button onclick="updateTimeframe('1M')">1 Month</button>
+                    <button onclick="updateTimeframe('3M')">3 Months</button>
+                    <button onclick="updateTimeframe('6M')">6 Months</button>
+                    <button onclick="updateTimeframe('1Y')">1 Year</button>
+                </div>
+                <div class="chart-container">
+                    <canvas id="historicalChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Sector Performance -->
+            <div class="card">
+                <div class="card-title">S&P 500 Sector Performance</div>
+                <ul class="sector-list" id="sectorList">
+                    <li class="sector-item">
+                        <span class="sector-name">Technology</span>
+                        <span class="sector-return positive">+3.17%</span>
+                    </li>
+                    <li class="sector-item">
+                        <span class="sector-name">Healthcare</span>
+                        <span class="sector-return positive">+1.84%</span>
+                    </li>
+                    <li class="sector-item">
+                        <span class="sector-name">Financials</span>
+                        <span class="sector-return positive">+2.06%</span>
+                    </li>
+                    <li class="sector-item">
+                        <span class="sector-name">Consumer Disc.</span>
+                        <span class="sector-return negative">-0.53%</span>
+                    </li>
+                    <li class="sector-item">
+                        <span class="sector-name">Energy</span>
+                        <span class="sector-return positive">+4.28%</span>
+                    </li>
+                    <li class="sector-item">
+                        <span class="sector-name">Industrials</span>
+                        <span class="sector-return positive">+1.19%</span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Volatility Metrics -->
+            <div class="card">
+                <div class="card-title">Volatility & Risk Metrics</div>
+                <div class="metric-grid">
+                    <div class="metric-box">
+                        <div class="metric-label">VIX Index</div>
+                        <div class="metric-value">16.24</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-label">Portfolio β</div>
+                        <div class="metric-value">1.08</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-label">Sharpe Ratio</div>
+                        <div class="metric-value">1.42</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-label">Max Drawdown</div>
+                        <div class="metric-value">-8.31%</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sector Allocation Chart -->
+            <div class="card">
+                <div class="card-title">Portfolio Allocation</div>
+                <div class="chart-container">
+                    <canvas id="allocationChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Correlation Analysis -->
+            <div class="card large-chart">
+                <div class="card-title">Asset Class Correlation Matrix</div>
+                <div class="chart-container">
+                    <canvas id="correlationChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <div class="copyright">&copy; 2025 Mateen Rashid. All rights reserved.</div>
+        </footer>
+    </div>
+
+    <script>
+        // Theme Management
+        function toggleTheme() {
+            const html = document.documentElement;
+            const btn = document.getElementById('themeBtn');
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            btn.textContent = newTheme === 'dark' ? '☀︎' : '☾';
+            updateChartColors();
+        }
+
+        // Load saved theme
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        document.getElementById('themeBtn').textContent = savedTheme === 'dark' ? '☀︎' : '☾';
+
+        // Get current theme colors
+        function getThemeColors() {
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            return {
+                text: isDark ? '#fafafa' : '#000000',
+                grid: isDark ? '#3f3f3f' : '#d4d4d4',
+                positive: '#0d9488',
+                negative: '#dc2626'
+            };
+        }
+
+        // Simulated market data
+        let currentTimeframe = '3M';
+        let historicalChart, allocationChart, correlationChart;
+        
+        // Generate realistic historical data
+        function generateHistoricalData(days, startValue, volatility) {
+            const data = [];
+            const labels = [];
+            let value = startValue;
+            const today = new Date();
+            
+            for (let i = days; i >= 0; i--) {
+                const date = new Date(today);
+                date.setDate(date.getDate() - i);
+                labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+                
+                // Random walk with drift
+                const change = (Math.random() - 0.49) * volatility;
+                value = value * (1 + change);
+                data.push(value.toFixed(2));
+            }
+            
+            return { labels, data };
+        }
+
+        // Initialize Historical Price Chart
+        const historicalData = generateHistoricalData(90, 4567, 0.0148);
+        const historicalCtx = document.getElementById('historicalChart').getContext('2d');
+        const colors = getThemeColors();
+        
+        historicalChart = new Chart(historicalCtx, {
+            type: 'line',
+            data: {
+                labels: historicalData.labels,
+                datasets: [
+                    {
+                        label: 'S&P 500',
+                        data: historicalData.data,
+                        borderColor: colors.positive,
+                        backgroundColor: colors.positive + '20',
+                        tension: 0.38,
+                        fill: true,
+                        borderWidth: 2
+                    },
+                    {
+                        label: 'Portfolio',
+                        data: generateHistoricalData(90, 107500, 0.0182).data,
+                        borderColor: colors.negative,
+                        backgroundColor: colors.negative + '20',
+                        tension: 0.38,
+                        fill: true,
+                        borderWidth: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            color: colors.text,
+                            font: {
+                                family: "Georgia, 'Times New Roman', Times, serif"
+                            }
+                        }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        titleFont: {
+                            family: "Georgia, 'Times New Roman', Times, serif"
+                        },
+                        bodyFont: {
+                            family: "Georgia, 'Times New Roman', Times, serif"
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + value.toLocaleString();
+                            },
+                            color: colors.text,
+                            font: {
+                                family: "Georgia, 'Times New Roman', Times, serif"
+                            }
+                        },
+                        grid: {
+                            color: colors.grid
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            color: colors.text,
+                            font: {
+                                family: "Georgia, 'Times New Roman', Times, serif"
+                            }
+                        },
+                        grid: {
+                            color: colors.grid
+                        }
+                    }
+                }
+            }
+        });
+
+        // Initialize Portfolio Allocation Chart
+        const allocationCtx = document.getElementById('allocationChart').getContext('2d');
+        allocationChart = new Chart(allocationCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Technology', 'Healthcare', 'Financials', 'Consumer', 'Energy', 'Other'],
+                datasets: [{
+                    data: [35, 20, 15, 12, 10, 8],
+                    backgroundColor: [
+                        '#0d9488',
+                        '#0f766e',
+                        '#115e59',
+                        '#134e4a',
+                        '#164e63',
+                        '#525252'
+                    ],
+                    borderWidth: 2,
+                    borderColor: getThemeColors().text
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: colors.text,
+                            font: {
+                                family: "Georgia, 'Times New Roman', Times, serif"
+                            }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.label + ': ' + context.parsed + '%';
+                            }
+                        },
+                        titleFont: {
+                            family: "Georgia, 'Times New Roman', Times, serif"
+                        },
+                        bodyFont: {
+                            family: "Georgia, 'Times New Roman', Times, serif"
+                        }
+                    }
+                }
+            }
+        });
+
+        // Initialize Correlation Chart
+        const correlationCtx = document.getElementById('correlationChart').getContext('2d');
+        correlationChart = new Chart(correlationCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Stocks-Bonds', 'Stocks-Gold', 'Stocks-Real Estate', 'Bonds-Gold', 'Bonds-RE', 'Gold-RE'],
+                datasets: [{
+                    label: 'Correlation Coefficient',
+                    data: [-0.42, 0.15, 0.68, -0.18, 0.32, 0.22],
+                    backgroundColor: function(context) {
+                        const value = context.parsed.y;
+                        return value >= 0 ? colors.positive + 'CC' : colors.negative + 'CC';
+                    },
+                    borderColor: function(context) {
+                        const value = context.parsed.y;
+                        return value >= 0 ? colors.positive : colors.negative;
+                    },
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        titleFont: {
+                            family: "Georgia, 'Times New Roman', Times, serif"
+                        },
+                        bodyFont: {
+                            family: "Georgia, 'Times New Roman', Times, serif"
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        min: -1,
+                        max: 1,
+                        ticks: {
+                            callback: function(value) {
+                                return value.toFixed(2);
+                            },
+                            color: colors.text,
+                            font: {
+                                family: "Georgia, 'Times New Roman', Times, serif"
+                            }
+                        },
+                        grid: {
+                            color: colors.grid
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            color: colors.text,
+                            font: {
+                                family: "Georgia, 'Times New Roman', Times, serif"
+                            }
+                        },
+                        grid: {
+                            color: colors.grid
+                        }
+                    }
+                }
+            }
+        });
+
+        // Update all chart colors when theme changes
+        function updateChartColors() {
+            const colors = getThemeColors();
+            
+            // Update historical chart
+            historicalChart.data.datasets[0].borderColor = colors.positive;
+            historicalChart.data.datasets[0].backgroundColor = colors.positive + '20';
+            historicalChart.data.datasets[1].borderColor = colors.negative;
+            historicalChart.data.datasets[1].backgroundColor = colors.negative + '20';
+            historicalChart.options.plugins.legend.labels.color = colors.text;
+            historicalChart.options.scales.y.ticks.color = colors.text;
+            historicalChart.options.scales.y.grid.color = colors.grid;
+            historicalChart.options.scales.x.ticks.color = colors.text;
+            historicalChart.options.scales.x.grid.color = colors.grid;
+            historicalChart.update();
+            
+            // Update allocation chart
+            allocationChart.data.datasets[0].borderColor = colors.text;
+            allocationChart.options.plugins.legend.labels.color = colors.text;
+            allocationChart.update();
+            
+            // Update correlation chart
+            correlationChart.options.scales.y.ticks.color = colors.text;
+            correlationChart.options.scales.y.grid.color = colors.grid;
+            correlationChart.options.scales.x.ticks.color = colors.text;
+            correlationChart.options.scales.x.grid.color = colors.grid;
+            correlationChart.update();
+        }
+
+        // Update market indices with simulated real-time data
+        function updateMarketData() {
+            const indices = [
+                { id: 'sp500', value: 4567.89, change: 1.23 },
+                { id: 'dow', value: 35842.45, change: -0.34 },
+                { id: 'nasdaq', value: 14234.56, change: 1.89 }
+            ];
+
+            indices.forEach(index => {
+                const valueEl = document.getElementById(`${index.id}-value`);
+                const changeEl = document.getElementById(`${index.id}-change`);
+                const titleEl = document.getElementById(`${index.id}-title`);
+                
+                // Add small random variation
+                const newValue = index.value * (1 + (Math.random() - 0.5) * 0.0012);
+                const newChange = index.change + (Math.random() - 0.5) * 0.08;
+                
+                valueEl.textContent = newValue.toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+                
+                const changeText = `${newChange >= 0 ? '+' : ''}${newChange.toFixed(2)}%`;
+                changeEl.textContent = changeText;
+                changeEl.className = `index-change ${newChange >= 0 ? 'positive' : 'negative'}`;
+                
+                // Update title color based on performance
+                titleEl.className = `card-title ${newChange >= 0 ? 'positive' : 'negative'}`;
+            });
+
+            // Update timestamp
+            const now = new Date();
+            document.getElementById('updateTime').textContent = now.toLocaleTimeString();
+        }
+
+        // Update timeframe
+        function updateTimeframe(timeframe) {
+            currentTimeframe = timeframe;
+            const days = timeframe === '1M' ? 30 : timeframe === '3M' ? 90 : timeframe === '6M' ? 180 : 365;
+            
+            const newData = generateHistoricalData(days, 4567, 0.0148);
+            historicalChart.data.labels = newData.labels;
+            historicalChart.data.datasets[0].data = newData.data;
+            historicalChart.data.datasets[1].data = generateHistoricalData(days, 107500, 0.0182).data;
+            historicalChart.update();
+        }
+
+        // Initial update
+        updateMarketData();
+
+        // Auto-refresh every 30 seconds
+        setInterval(updateMarketData, 30000);
+
+        // Simulate sector performance updates
+        function updateSectorPerformance() {
+            const sectors = document.querySelectorAll('.sector-return');
+            sectors.forEach(sector => {
+                const currentValue = parseFloat(sector.textContent);
+                const newValue = currentValue + (Math.random() - 0.5) * 0.27;
+                sector.textContent = `${newValue >= 0 ? '+' : ''}${newValue.toFixed(2)}%`;
+                sector.className = `sector-return ${newValue >= 0 ? 'positive' : 'negative'}`;
+            });
+        }
+
+        setInterval(updateSectorPerformance, 47000);
+    </script>
+</body>
+</html>
